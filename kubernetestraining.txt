@@ -1,0 +1,462 @@
+
+curl -vi url
+Kind      version
+pod       v1
+service   v1
+ResourceQuota v1
+deployment apps/v1
+replicaset apps/v1
+
+Get resource quota of all the nodes in a cluster -- 
+kubectl describe node | grep -E 'cpu  |memory  |Name: |Allocated resources:|Non-terminated Pods: '
+
+POD--
+kubectl exec -it -n itapplicationstatus-8180-qa itappst-postgres-qa-deployment-6c7c6b68df-wglm7 itappst-postgres-qa-app -- sh
+delete all pods of a namespace--
+kubectl delete --all pods --namespace=foo
+kubectl delete all --all -n pipeline-demo
+kubectl get pods --all-namespaces
+
+Annotate namespace--
+kubectl annotate ns/istio-system scheduler.alpha.kubernetes.io/node-selector="node_pool=infra-ingress-2" --overwrite
+
+Deploy image as a pod-- kubectl run pod-name --image image-name -n namespace
+kubectl run redis --image=redis:alpine --labels=tier=db
+kubectl get pods
+kubectl describe pod pod-name
+The READY column in the kubectl get pods displays the running num of containers/total containers in the pod
+kubectl get pods --all-namespaces
+vi pod.yaml
+press i to edit it
+after editing, press ESC>colon>wq>enter
+kubectl get pods --selector key=value or kubectl get pods -l key=value
+Example: kubectl get pods --selector app=demo
+kubectl get pods -l env=prod,bu=finance,tier=frontend
+kubectl get all --selector key=value
+To get the number of pods with a particular label--
+kubectl get pods -l key=value --no-headers | wc -l
+kubectl get pods -o wide
+
+**Editing a pod**
+creating a pod schema
+1. Extract pod definition to a yaml file
+kubectl get pod webapp -o yaml > my-new-pod.yaml
+2. Edit the YAML file 
+3. Delete running pod
+kubectl delete pod webapp
+4. Create the pod with the made changes-
+kubectl create -f my-new-pod.yaml
+
+Edit the deployment/rs
+then delete all pods using kubectl delete --all po
+
+REPLICASET/DEPLOYMENT--
+kubectl get replicationcontroller
+kubectl get replicaset
+kubectl get rs
+kubectl describe deploy deployment-name | grep -i image
+kubectl edit replicaset replica.yaml
+
+Scale replicas from CLI - 
+kubectl scale --replicas=6 -f replicaset.yaml
+kubectl scale --replicas=5 rs/new-replica-set
+kubectl -n istio-system scale --replicas=6 deploy istio-ingressgateway
+
+
+kubectl get deploy -n namespace-name
+kubectl get deployments
+kubectl create deploy httpd-frontend --image=httpd:2.4-alpine --replicas=3
+kubectl create deployment deployment-name --image=image-name --dry-run=client -o yaml > redis.yaml
+kubectl get deploy blue -o yaml > blue.yaml
+kubectl edit deployment deployment-name
+kubectl create deployment --image=nginx nginx --dry-run -o yaml
+kubectl create deployment blue --image=nginx --replicas=3
+kubectl get ds --all-namespaces
+
+SERVICE
+kubectl run pod-name --image=name -n namespace-name --expose --port=80 --dry-run=client -o yaml 
+kubectl run pod-name --image=name -n namespace-name --expose --port=80
+kubectl expose pod pod-name --port=80 --name nginx-service --type=NodePort --dry-run=client -o yaml
+kubectl expose pod redis --port=6379 --target-port=6379 --name=redis-service
+
+To see all the resources-
+kubectl get all
+
+kubectl config set-context --current --namespace=demo-9234-test01
+
+kubectl create secret docker-registry gcr-pull-key \
+--docker-server=gcr.io \
+--docker-username=_json_key \
+--docker-password="$(cat /c/Users/SMulani2/'OneDrive - Schlumberger'/CKA/gc.json)" \
+--docker-email=smulani2@slb.com
+
+kubectl create secret docker-registry gcr-pull-key \
+--docker-server=gcr.io \
+--docker-username=_json_key \
+--docker-password="$(cat gke_key.json)" \
+--docker-email=smulani2@slb.com
+
+kubectl create secret tls mateo-dev-tls --key "C:\Users\SMulani2\Desktop\azr6382devapp03.key" --cert "C:\Users\SMulani2\Desktop\certnew.cer" -n istio-system
+kubectl create secret tls sinetapi-tls --key "C:\Users\SMulani2\sinetapi.key" --cert "C:\Users\SMulani2\sinetapi.cer" -n istio-system
+Taint--
+kubectl taint nodes <node-name> key=value:taint-effect
+taint-effect: These effects define what if the pod do not tolerate the taints
+1. NoSchedule-pod wont be scheduled if It does not tolerate the taint
+2. NoExecute: Previously scheduled pods will be evicted and no new pods will be scheduled.
+3. PreferNoSchedule: System will try to avoid pods with no tolerations on the Node, but is not guaranteed.
+You can put multiple taints on the same node and multiple tolerations on the same pod.
+
+kubectl describe node gke-gcp9234prdgkecls-build-agent-node-69f3ecb9-gtff | grep -i Taint
+Remove a taint: kubectl taint node node1 key-value:NoSchedule-
+
+kubectl label node node1 app=blue
+
+nodeSelector:
+Can be used for simple conditions, but if we want to apply restrictions that includes multiple condtitions,
+then we would need Node Affinity.
+
+kubectl get nodes node01 --show-labels
+kubectl get namespace namespace-name --show-labels
+kubectl get po --show-labels
+kubectl get po -l key=value # filters and shows pods that has the particular label
+
+"When a pod is created the containers are assigned a default CPU request of .5 and memory of 256Mi". For the POD to pick up those defaults you must have first set those as default values for request and limit by creating a LimitRange in that namespace. By default, k8s sets resource limits to 1 CPU and 512Mi of memory
+
+Remove a label--
+kubectl label ns namespace-name key-
+
+
+Static pods--
+find the location path for kubelet: ps -ef | grep kubelet
+search for kubelet config there
+
+
+
+ssh into node--
+ssh ip address
+remove file: rm -rf filename
+
+Rollout and updates--
+kubectl rollout status deployment deployment name
+kubectl rollout history deployment deployment name
+kubectl rollout undo deployment deployment name
+
+Environtment variables, ConfigMaps & Secrets--
+
+1. Add env variables as key-valye pairs in the pod definition file
+   env:
+     - name: color
+       value: blue
+2. Config Maps
+
+There are 2 phases involved in configuring ConfigMaps.
+First, create the configMaps
+Second, Inject then into the pod.
+
+   2.1. Create a config map 
+        2.1.1 Imperative method: kubectl create configmap \
+                                 configmap-name --from-literal=key=value\
+                                                --from-file=path-to-file
+        2.1.2 Declarative method: 
+        
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: app-config
+data:
+ APP_COLOR: blue
+ APP_MODE: prod
+
+kubectl create -f config-map.yaml
+
+View a list of configmaps -- kubectl get cm
+
+Add configmap into the Pod--
+1.
+envFrom:
+   - configMapRef:
+       name: app-config
+OR
+2.
+env:
+  - name: key-name
+    valueFrom:
+      configMapKeyRef:
+        name: configmap-name
+        key: key-name
+
+OR
+3.
+volumes:
+  - name: any-name
+    configMap: 
+      name: configmap-name
+
+
+Imperative ways to create a secret--
+kubectl create secret generic app-secret --from-literal=DB_Host=mysql --from-literal=DB_User=root --from-file=path-to-file
+kubectl create secret generic app-secret --from-file=app_secret.properties
+
+Declarative way--
+Step 1: Generate a hash value of the password and pass it to secret-data.yaml definition value as a value to DB_Password varaible.
+** Encode Secrets
+$ echo -n "mysql" |base64
+$ echo -n "root" |base64
+$ echo -n "paswrd"|base64
+
+Step2: 
+apiVersion: v1
+kind: Secret
+metadata:
+ name: app-secret
+data:
+  DB_Host: bX1zcWw=
+  DB_User: cm9vdA==
+  DB_Password: cGFzd3Jk
+
+$ kubectl create -f secret-data.yaml
+
+To view the values of the secret
+
+$ kubectl get secret app-secret -o yaml
+
+** To decode secrets
+$ echo -n "bX1zcWw=" |base64 --decode
+$ echo -n "cm9vdA==" |base64 --decode
+$ echo -n "cGFzd3Jk" |base64 --decode
+
+
+We can pass secrets to Pods, the same way we pass configmaps to pods--
+volumes:
+  - name: any-name
+    secret:
+      secretName: secret-name
+
+
+os upgrade----------
+kubectl drain node-name --ignore-daemonsets 
+kubectl cordon node-name
+kubectl uncordon node-name
+
+When a node is drained, only those pods which are either a part of rs or deployment will get scheduled on other nodes and still stay alive. All the pods which are created independently with pod as the kind will get lost post draining the node.
+Drain node --
+WorkerNode="gcp7595prdlwr04"
+kubectl drain $WorkerNode --ignore-daemonsets
+kubectl drain node-name --ignore-daemonsets --delete-local-data (PV specially , use this if above doesnt work)
+Kubectl get pod --all-namespaces -o wide | grep $WorkerNode
+Kubectl get pod --all-namespaces -o wide | grep $WorkerNode | wc -l
+docker node inspect --pretty $WorkerNode
+
+Cluster upgrade using kubeadm--
+
+**Master Node**
+1. kubeadm upgrade plan
+kubeadm does not upgrade kubelet. They need to be manually upgraded on every worker node.
+
+kubectl drain master-node --ignore-daemonsets
+
+2. First upgrade kubeadm tool using below command-
+apt-get upgrade -y kubeadm=version
+
+3. upgrade the cluster-
+kubeadm upgrade apply version
+Example :: kubeadm upgrade apply v1.12.0
+
+4. To upgrade kubelet on worker nodes-
+apt-get upgrade -y kubelet=version
+systemctl restart kubelet
+
+**Worker node**
+1. kubectl drain node-name
+2. apt-get upgrade -y kubeadm=version
+   kubeadm upgrade node
+3. apt-get upgrade -y kubelet=version
+4. kubeadm upgrade node config --kubelet-version v1.12.0
+5. systemctl restart kubelet
+6. kubectl get nodes
+7. kubectl uncorden node-name
+
+-- kubectl version of client and server:
+kubectl version --short
+
+
+BACKUP--
+kubectl get all --all-namespaces -o yaml > info.yaml
+
+ETCD backup--
+etcdctl --version
+ refer kubernetes docs - configure and upgrade etcd.
+ETCDCTL_API=3 etcdctl version
+Go to /etc/kubernetes/manifests folder.
+Cat etcd.yaml
+(copy the ETCDCTL wali line from under the command section of the yaml) snapshot save destination location
+
+ETCDCTL_API=3 etcdctl --endpoints=https://[127.0.0.1]:2379 \
+> --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+> --cert=/etc/kubernetes/pki/etcd/server.crt \
+> --key=/etc/kubernetes/pki/etcd/server.key \
+> snapshot save /opt/snapshot-pre-boot.db
+
+restore--
+ETCDCTL_API=3 etcdctl  --data-dir /var/lib/etcd-from-backup \
+snapshot restore /opt/snapshot-pre-boot.db
+
+Note: In this case, we are restoring the snapshot to a different directory but in the same server where we took the backup (the controlplane node) As a result, the only required option for the restore command is the --data-dir.
+
+
+Next, update the /etc/kubernetes/manifests/etcd.yaml:
+
+We have now restored the etcd snapshot to a new path on the controlplane - /var/lib/etcd-from-backup, so, the only change to be made in the YAML file, is to change the hostPath for the volume called etcd-data from old directory (/var/lib/etcd) to the new directory /var/lib/etcd-from-backup.
+
+watch "docker ps | grep etcd"
+
+NETWORKING--
+ssh node01
+ipconfig -a
+
+ps -aux| grep kubelet
+
+INGRESS--
+Ingress controller needs the following k8 resources--
+1. ns
+2. cm
+3. service account
+
+Rollout - App lifecycle management
+$ kubectl create -f deployment-definition.yaml
+$ kubectl get deployments
+$ kubectl apply -f deployment-definition.yaml
+$ kubectl set image deployment/myapp-deployment nginx=nginx:1.9.1
+$ kubectl rollout status deployment/myapp-deployment
+$ kubectl rollout history deployment/myapp-deployment
+$ kubectl rollout undo deployment/myapp-deployment
+
+CLUSTER CREATION::
+Get the version of kubelet : kubelet --version
+
+Troubleshooting::
+Application errors-
+1. Service name can be wrong
+2. target port can be wrong
+3. secrets/env variables can be incorrect
+4. nodeport can be incorrect
+
+Worker node:
+systemctl check status kubelet.service
+systemctl restart kubelet
+journalctl -u kubelet
+
+cd /etc/systemd/system/kubelet.service.d/
+ls
+cat 10-kubeadm.conf -- to get location of config.yaml and kubeconfig file i.e. (kubelet.conf)
+systemctl daemon-reload
+kubectl cluster-info
+cd /etc/kubernetes/kubelete.conf file for kubeconfig changes
+On the worker node, all the yamls related to kubelet is found under /var/lib/kubelet folder
+
+N/W troubleshooting--
+1. kube-proxy errors -- check for the kube-proxy pod logs, check the config file is with the same name in pod yaml as well as cm of the kube-proxy.
+2. Check if n/w plugin is installed.
+
+Networking::
+ip route
+1. ip link or ip a commands gives the list of all the n/w interfaces on the node. To see which n/w interface is linked to the node, search for the n/w interface which has the IP of the node in it.
+2. ifconfig -a 
+3. netstat -netulp | grep kube-proxy to get the port on which it is running on master node
+4. Check details about CNI plugins -- cd /opt/cni/bin
+5. Check the network plugin configured for the kubernetes cluster -- cd /etc/cni/net.d/ and then do ls
+
+inspect any kubernetes service-
+ps -aux | grep kubelet
+
+IP range for nodes on the cluster -- do ip link and check for ens0 or do kubectl get nodes -o wide
+IP range for pods on the cluster -- check the logs of any weavenet pod and find the value for ipalloc-range
+IP range for services on the cluster -- cd /etc/kubernetes/manifests on the master node; cat kube-apiserver.yaml and check for service-cluster-ip-range
+
+One pod can access other pod in the same namespace by getting into the container and then curl svc-name port
+If you want to connect to a pod that belongs to another namespace, you would need to curl svc-name.destination-namespace-name port
+
+Static pods will be created at the below location on the master node-
+/etc/kubernetes/manifests
+To check the location of static pod path,
+1. systemctl status kubelet
+2. look for --config value and cd to config.yaml and look for staticpodpath in the file, that is the place you store static pods in cluster
+you dont need to apply yaml file as kubelet does it for you, just do kubectl get pods in master node
+
+To add SYS_TIME or any security context related thing within the pod, refer below doc--
+configure pod container/security-context
+fsgroup, runasuser for pod, refer security context
+
+Rolling Updates and rollbacks-
+1. Create a pod with some specifications and record it
+kubectl run nginx-demo --image=nginx:1.16 --record
+
+Check for the record-
+kubectl rollout history deployment deployment name
+
+Then if we wish to update the deployment to nginx:1.17 version-
+kubectl set image deployment/deployment-name container_name=nginx:1.17 --record
+
+Creating CSR for kubernetes API server-
+https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/
+kubectl certificate approve CSR-name
+kubectl auth can-i update pods --namespace=demo --as=user-name
+
+To nslookup to a pod and svc from a cluster,
+create a pod with busybox:1.28 image
+nslookup svc name
+nslookup pod IP.namespace.pod
+example nslookup 10-35-12-0.namespace_name.pod
+
+service.default.svc.cluster.local
+
+TLS--
+view certificates in /etc/kubernetes/manifests then cat kube-apiserver or etcd according to the need.
+decode a certificate
+openssl x509 -in /etc/kubernetes/pki/apiserver.crt -text -noout
+
+CSR process----
+Create key
+openssl genrsa -out jane.key 2048
+Create cert
+openssl req -new -key jane.key -subj "/CN=jane" -out jane.csr
+csr to pem conversion-
+openssl x509 -inform der -in rootca.cer -out rootca.pem
+Then, encode the csr file as shown below
+cat jane.csr | base64
+
+Then create CSR yaml and paste the above encoded values in the request section.
+It would be in pending state, approve it using kubectl certificate approve csr-name
+
+
+
+k config get-contexts # copy manually
+​
+k config get-contexts -o name > /opt/course/1/contexts
+kubectl get pod -A --sort-by=.metadata.uid
+
+Question--
+What is the Common Name (CN) configured on the ETCD Server certificate?
+Answer--
+openssl x509 -in /etc/kubernetes/pki/etcd/server.crt -text
+
+Troubleshooting tips!!!!!!
+
+Error -- grpc: addrConn.createTransport failed to connect to {https://127.0.0.1:2379  <nil> 0 <nil>}. Err :connection error: desc = "transport: Error while dialing dial tcp 127.0.0.1:2379: connect: connection refused". Reconnecting...
+
+Cause: Issue with the certificate, probably check the certificate paths in the respective resource such as kube-apiserver file, etcd file, etc.
+
+to check the status of the static pods,
+docker ps -a | grep kube-apiserver
+docker ps -a | grep kubelet
+docker ps -a | grep etcd
+
+to check the logs of static pods,
+docker logs container ID (from above command) --tail=10
+
+
+Run a command as a specific user to check if the role works for a user--
+kubectl get pods -- as user_name
+
+
+
